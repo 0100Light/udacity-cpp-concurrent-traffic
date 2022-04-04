@@ -27,7 +27,8 @@ void MessageQueue<T>::send(T &&msg)
     // as well as _condition.notify_one() to add a new message to the queue and afterwards send a notification.
     std::lock_guard<std::mutex> lockGuard(_mutex);
 
-    _queue.push_back(std::move(msg));
+    _queue.clear();
+    _queue.emplace_back(msg); // emplace_back() moves the object
     _condition.notify_one();
 }
 
@@ -39,13 +40,15 @@ TrafficLight::TrafficLight()
     _mq = std::make_shared<MessageQueue<TrafficLightPhase>>();
 }
 
+TrafficLight::~TrafficLight(){}
+
 void TrafficLight::waitForGreen()
 {
     // FP.5b : add the implementation of the method waitForGreen, in which an infinite while-loop 
     // runs and repeatedly calls the receive function on the message queue. 
     // Once it receives TrafficLightPhase::green, the method returns.
     while (true){
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
         if (_mq->receive() == TrafficLightPhase::green) { return; };
     }
 }
@@ -69,14 +72,14 @@ void TrafficLight::cycleThroughPhases()
     // to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds. 
     // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles.
     auto lastUpdate = std::chrono::system_clock::now();
-    int cycleDuration = rand() % 3 + 4;
+    float cycleDuration = rand() % 3 + 4;
 
     while (true)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
 
-        if (timeSinceLastUpdate >= cycleDuration * 500) // magnify by 500x for better visualization
+        if (timeSinceLastUpdate >= cycleDuration) 
         {
             if (_currentPhase == TrafficLightPhase::green){ 
                 _currentPhase = TrafficLightPhase::red; 
@@ -86,10 +89,9 @@ void TrafficLight::cycleThroughPhases()
             }
 
             // std::cout << "cycleThroughPhases: current phase is " << _currentPhase << std::endl;
-            std::cout << "light changed" << std::endl;
+            // std::cout << "light changed" << std::endl;
             lastUpdate = std::chrono::system_clock::now();
+            _mq->send(std::move(getCurrentPhase()));
         }
-
-        _mq->send(std::move(getCurrentPhase()));
     }
 }
