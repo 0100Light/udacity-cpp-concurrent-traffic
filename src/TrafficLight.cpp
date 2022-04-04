@@ -36,6 +36,7 @@ void MessageQueue<T>::send(T &&msg)
 TrafficLight::TrafficLight()
 {
     _currentPhase = TrafficLightPhase::red;
+    _mq = std::make_shared<MessageQueue<TrafficLightPhase>>();
 }
 
 void TrafficLight::waitForGreen()
@@ -75,12 +76,17 @@ void TrafficLight::cycleThroughPhases()
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
 
-        if (timeSinceLastUpdate >= cycleDuration)
+        if (timeSinceLastUpdate >= cycleDuration * 500) // magnify by 500x for better visualization
         {
-            if (_currentPhase == TrafficLightPhase::green){ _currentPhase = TrafficLightPhase::red; }
-            if (_currentPhase == TrafficLightPhase::red){ _currentPhase = TrafficLightPhase::green; }
+            if (_currentPhase == TrafficLightPhase::green){ 
+                _currentPhase = TrafficLightPhase::red; 
+            } else
+            {
+                _currentPhase = TrafficLightPhase::green; 
+            }
 
-            std::cout << "cycleThroughPhases: current phase is " << _currentPhase << std::endl;
+            // std::cout << "cycleThroughPhases: current phase is " << _currentPhase << std::endl;
+            std::cout << "light changed" << std::endl;
             lastUpdate = std::chrono::system_clock::now();
         }
 
